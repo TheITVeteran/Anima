@@ -378,11 +378,13 @@ const startAvatarLoading = () => {
   clearAvatarFinishTimer();
   clearAvatarLoadTimeout();
   avatarLoadTimeout.value = window.setTimeout(() => {
-    if (!useCanvasRenderer.value) {
-      isAvatarLoading.value = false;
+    console.warn("[AvatarLoad] timeout reached, forcing exit loading state");
+    isAvatarLoading.value = false;
+    if (!isChatMode.value) {
+      isChatMode.value = true;
     }
     avatarLoadTimeout.value = null;
-  }, 15000);
+  }, 20000);
 };
 
 const finishAvatarLoading = () => {
@@ -483,14 +485,13 @@ const createRenderer = async () => {
       avatarRenderer.value?.startPlay2();
     },
     () => {},
-    () => {
+    (err: unknown) => {
+      console.error("[AvatarJS] error:", err);
       avatarRenderer.value?.close();
       avatarRenderer.value = null;
       modelUrl.value = "";
-      if (fallbackImageLoaded.value) {
-        isChatMode.value = true;
-        // finishAvatarLoading();
-      }
+      isChatMode.value = true;
+      finishAvatarLoading();
     },
     modelUrl.value,
   );

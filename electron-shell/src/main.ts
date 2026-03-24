@@ -145,9 +145,9 @@ const createWindow = () => {
   Menu.setApplicationMenu(null);
 
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 900,
+    width: 880,
+    height: 1000,
+    minWidth: 600,
     minHeight: 600,
     icon: windowIcon,
     backgroundColor: '#000000',
@@ -170,6 +170,12 @@ const createWindow = () => {
   if (!isPackaged) {
     mainWindow.webContents.openDevTools();
   }
+
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (input.key === 'F12' && input.type === 'keyDown') {
+      mainWindow?.webContents.toggleDevTools();
+    }
+  });
 };
 
 // ---------------------------------------------------------------------------
