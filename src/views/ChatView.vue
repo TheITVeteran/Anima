@@ -579,7 +579,7 @@ const stopPlaying = () => {
   avatarRenderer.value?.stopPlay();
 };
 
-const useOpenClaw = computed(() => Boolean(currentAvatar.value?.agentId));
+const useOpenClaw = computed(() => true);
 
 const resolvedAgentId = computed(() => {
   if (selectedAgentId.value && agents.value.some((a) => a.id === selectedAgentId.value)) {
@@ -888,9 +888,11 @@ const toggleRecording = async () => {
           :class="{ hidden: !isChatMode }"
         />
         <div class="speech-bubble" :class="{ visible: showSpeechBubble }">
-          <div class="bubble-name">{{ avatarName }}</div>
-          <div v-if="isTyping" class="bubble-dots"><span></span><span></span><span></span></div>
-          <div v-else>{{ bubbleText }}</div>
+          <div class="bubble-inner">
+            <div class="bubble-name">{{ avatarName }}</div>
+            <div v-if="isTyping" class="bubble-dots"><span></span><span></span><span></span></div>
+            <div v-else>{{ bubbleText }}</div>
+          </div>
         </div>
       </div>
       <div v-if="!isChatMode" class="chat-loading-center">

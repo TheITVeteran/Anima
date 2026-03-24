@@ -4,7 +4,7 @@ type ApiResponse<T> = {
   msg?: string;
 };
 
-const DEFAULT_API_BASE_URL = "https://sumi-test.sumeruai.com";
+const DEFAULT_API_BASE_URL = "https://sumi.sumeruai.com";
 
 const getApiBaseUrl = () => {
   const runtimeBaseUrl = (window as any)?.BaseConfig?.apiBaseUrl as string | undefined;

@@ -43,10 +43,10 @@ type RemoteAvatarItem = {
 
 const DEFAULT_AVATAR_VOICE_ID = "zh-female";
 const DEFAULT_USER_EMAIL = "user@email.com";
-const PUBLIC_AVATAR_IDS = ["1453322680344576", "1453328544415744"];
+const PUBLIC_AVATAR_IDS = ["1453549133365248", "1453549193527296"];
 const PUBLIC_AVATAR_NAMES: Record<string, string> = {
-  "1453322680344576": "Sumi",
-  "1453328544415744": "Tomo",
+  "1453549133365248": "Tomo",
+  "1453549193527296": "Sumi",
 };
 const AGENT_MAP_KEY = "avatarAgentMap";
 

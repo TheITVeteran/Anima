@@ -107,7 +107,7 @@ if (-not (Test-Path $serverEnvPath)) {
         "",
         "ANIMA_HOST=0.0.0.0",
         "ANIMA_PORT=19000",
-        "ANIMA_API_BASE_URL=https://sumi-test.sumeruai.com"
+        "ANIMA_API_BASE_URL=https://sumi.sumeruai.com"
     )
 
     if ($OpenClawUrl) {

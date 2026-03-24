@@ -39,10 +39,10 @@ description: Install, configure, start, verify, update, and optionally expose th
 - `npm`
 - Python 3.9+
 - 能访问 GitHub
-- 能访问 `https://sumi-test.sumeruai.com`
+- 能访问 `https://sumi.sumeruai.com`
 
 说明：
-- Anima 的登录、头像生成、TTS、ASR、ATF 默认依赖 `https://sumi-test.sumeruai.com`
+- Anima 的登录、头像生成、TTS、ASR、ATF 默认依赖 `https://sumi.sumeruai.com`
 - 即使 OpenClaw 已接好，如果这条外网链路不通，数字人功能仍会不完整
 
 如果缺依赖：
@@ -106,7 +106,7 @@ if [ -n "$TOKEN" ]; then
   cat > server/.env <<EOF
 ANIMA_HOST=0.0.0.0
 ANIMA_PORT=19000
-ANIMA_API_BASE_URL=https://sumi-test.sumeruai.com
+ANIMA_API_BASE_URL=https://sumi.sumeruai.com
 OPENCLAW_API_URL=$OPENCLAW_URL
 OPENCLAW_TOKEN=$TOKEN
 OPENCLAW_DEFAULT_AGENT=$OPENCLAW_AGENT
@@ -115,7 +115,7 @@ else
   cat > server/.env <<EOF
 ANIMA_HOST=0.0.0.0
 ANIMA_PORT=19000
-ANIMA_API_BASE_URL=https://sumi-test.sumeruai.com
+ANIMA_API_BASE_URL=https://sumi.sumeruai.com
 EOF
 fi
 ```
@@ -345,7 +345,7 @@ curl -fsS http://127.0.0.1:19000/health
 ### Q2. 页面能打开，但创建数字人或语音功能失败
 
 优先检查：
-- 是否能访问 `https://sumi-test.sumeruai.com`
+- 是否能访问 `https://sumi.sumeruai.com`
 - 浏览器登录是否成功
 - `anima-server.log` 是否有请求转发报错
 

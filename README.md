@@ -336,7 +336,7 @@ Anima/
 
 | 变量 | 说明 | 默认值 |
 |---|---|---|
-| `VITE_API_BASE_URL` | 数字人后端 API 地址 | `https://sumi-test.sumeruai.com` |
+| `VITE_API_BASE_URL` | 数字人后端 API 地址 | `https://sumi.sumeruai.com` |
 
 ### Flask 服务器（`server/.env`）
 
@@ -344,7 +344,7 @@ Anima/
 |---|---|---|
 | `ANIMA_HOST` | 绑定地址 | `0.0.0.0` |
 | `ANIMA_PORT` | 监听端口 | `19000` |
-| `ANIMA_API_BASE_URL` | 数字人后端 API 地址 | `https://sumi-test.sumeruai.com` |
+| `ANIMA_API_BASE_URL` | 数字人后端 API 地址 | `https://sumi.sumeruai.com` |
 | `OPENCLAW_API_URL` | OpenClaw API 地址 | （空） |
 | `OPENCLAW_TOKEN` | OpenClaw Bearer Token | （空） |
 | `OPENCLAW_DEFAULT_AGENT` | 默认 Agent ID | `main` |

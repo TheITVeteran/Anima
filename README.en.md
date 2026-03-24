@@ -336,7 +336,7 @@ Anima/
 
 | Variable | Description | Default |
 |---|---|---|
-| `VITE_API_BASE_URL` | Digital human backend API URL | `https://sumi-test.sumeruai.com` |
+| `VITE_API_BASE_URL` | Digital human backend API URL | `https://sumi.sumeruai.com` |
 
 ### Flask Server (`server/.env`)
 
@@ -344,7 +344,7 @@ Anima/
 |---|---|---|
 | `ANIMA_HOST` | Bind address | `0.0.0.0` |
 | `ANIMA_PORT` | Listen port | `19000` |
-| `ANIMA_API_BASE_URL` | Digital human backend API URL | `https://sumi-test.sumeruai.com` |
+| `ANIMA_API_BASE_URL` | Digital human backend API URL | `https://sumi.sumeruai.com` |
 | `OPENCLAW_API_URL` | OpenClaw API URL | (empty) |
 | `OPENCLAW_TOKEN` | OpenClaw Bearer Token | (empty) |
 | `OPENCLAW_DEFAULT_AGENT` | Default Agent ID | `main` |
