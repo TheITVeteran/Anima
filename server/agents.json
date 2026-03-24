@@ -1,0 +1,25 @@
+[
+  {
+    "id": "main",
+    "workspace": "/home/agent/.openclaw/workspace",
+    "agentDir": "/home/agent/.openclaw/agents/main/agent",
+    "model": "openai-codex/gpt-5.3-codex",
+    "bindings": 0,
+    "isDefault": true,
+    "routes": [
+      "default (no explicit rules)"
+    ]
+  },
+  {
+    "id": "hyekyo",
+    "name": "hyekyo",
+    "identityName": "慧乔",
+    "identityEmoji": "🌙",
+    "identitySource": "identity",
+    "workspace": "/home/agent/.openclaw/workspace-hyekyo",
+    "agentDir": "/home/agent/.openclaw/agents/hyekyo/agent",
+    "model": "openai-codex/gpt-5.3-codex",
+    "bindings": 1,
+    "isDefault": false
+  }
+]
