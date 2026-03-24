@@ -1,7 +1,7 @@
 {
   "name": "anima",
   "productName": "Anima",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Digital human interactive desktop app",
   "main": ".vite/build/main.js",
   "private": true,

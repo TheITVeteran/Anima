@@ -1,3 +1,4 @@
+import path from 'path';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
@@ -6,6 +7,9 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+
+const iconPath = path.resolve(__dirname, 'assets', 'icon.ico');
+const iconUrl = `file:///${iconPath.replace(/\\/g, '/')}`;
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -20,6 +24,7 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({
       setupIcon: 'assets/icon.ico',
+      iconUrl,
     }),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
