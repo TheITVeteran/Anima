@@ -2995,7 +2995,7 @@ input {
 
 .speech-bubble {
   left: calc(50% + 130px);
-  top: 44%;
+  top: 20%;
   max-width: 240px;
   z-index: 6;
 }
