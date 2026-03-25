@@ -43,10 +43,10 @@ type RemoteAvatarItem = {
 
 const DEFAULT_AVATAR_VOICE_ID = "zh-female";
 const DEFAULT_USER_EMAIL = "user@email.com";
-const PUBLIC_AVATAR_IDS = ["1453549133365248", "1453549193527296"];
+const PUBLIC_AVATAR_IDS = ["1453606505259008", "1453607839064064"];
 const PUBLIC_AVATAR_NAMES: Record<string, string> = {
-  "1453549133365248": "Tomo",
-  "1453549193527296": "Sumi",
+  "1453606505259008": "Tomo",
+  "1453607839064064": "Sumi",
 };
 const AGENT_MAP_KEY = "avatarAgentMap";
 
@@ -68,6 +68,16 @@ const saveAgentId = (avatarId: string, agentId: string) => {
   localStorage.setItem(AGENT_MAP_KEY, JSON.stringify(map));
 };
 
+const SELECTED_AVATAR_KEY = "animaSelectedAvatarId";
+
+const readSelectedAvatarId = (): string => {
+  try {
+    return localStorage.getItem(SELECTED_AVATAR_KEY) || "sumi";
+  } catch {
+    return "sumi";
+  }
+};
+
 const readStoredEmail = (): string => {
   try {
     const raw = localStorage.getItem("userStore");
@@ -81,7 +91,7 @@ const readStoredEmail = (): string => {
 
 const state = reactive({
   userEmail: readStoredEmail(),
-  selectedAvatarId: "sumi",
+  selectedAvatarId: readSelectedAvatarId(),
   avatars: [
     {
       id: "sumi",
@@ -117,6 +127,7 @@ const useAppState = () => {
 
   const selectAvatar = (id: string) => {
     state.selectedAvatarId = id;
+    try { localStorage.setItem(SELECTED_AVATAR_KEY, id); } catch { /* ignore */ }
   };
 
   const createAvatarTask = (

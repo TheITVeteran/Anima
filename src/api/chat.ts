@@ -53,19 +53,30 @@ const openclawChat = async (options: OpenClawChatOptions): Promise<string> => {
 
   const decoder = new TextDecoder();
   let fullText = "";
+  let buffer = "";
+  let chunkIdx = 0;
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
 
-    const chunk = decoder.decode(value, { stream: true });
-    const lines = chunk.split("\n");
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    chunkIdx++;
+    if (lines.length > 0) {
+      // console.log(`[SSE] chunk#${chunkIdx} lines=${lines.length} bufferRem=${buffer.length}`);
+    }
 
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed || !trimmed.startsWith("data:")) continue;
       const payload = trimmed.slice(5).trim();
-      if (payload === "[DONE]") continue;
+      if (payload === "[DONE]") {
+        console.log("[SSE] received [DONE]");
+        continue;
+      }
 
       try {
         const parsed = JSON.parse(payload);
@@ -74,11 +85,16 @@ const openclawChat = async (options: OpenClawChatOptions): Promise<string> => {
           fullText += delta;
           onChunk?.(fullText);
         }
-      } catch {
-        // skip non-JSON lines
+      } catch (e) {
+        console.warn("[SSE] JSON parse failed for line:", trimmed, e);
       }
     }
   }
+
+  if (buffer.trim()) {
+    console.warn("[SSE] leftover buffer after stream ended:", buffer);
+  }
+  console.log(`[SSE] stream complete, fullText length=${fullText.length}`);
 
   await onDone?.(fullText);
   return fullText;

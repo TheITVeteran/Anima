@@ -2982,11 +2982,15 @@ input {
 .chat-character img {
   width: 600px;
   height: 800px;
+  /* transform: scale(1.2); */
+  transform-origin: bottom center;
 }
 
 .chat-avatar-canvas {
   width: 600px;
   height: 800px;
+  /* transform: scale(1.2); */
+  transform-origin: bottom center;
 }
 
 .speech-bubble {
@@ -3004,6 +3008,6 @@ input {
 .chat-input-area,
 .voice-mode-area {
   width: 100%;
-  max-width: 420px;
+  max-width: 540px;
 }
 

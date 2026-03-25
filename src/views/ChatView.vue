@@ -6,7 +6,7 @@ import { asrBase64, atfDt, audioLanguageList, audioList, getApiBaseUrl, getAvata
 import { openclawChat, fetchOpenClawAgents, syncOpenClawAgents } from "../api/chat";
 import type { ChatMessage as OpenClawMessage, OpenClawAgent } from "../api/chat";
 import { translate } from "../locales";
-import { DEFAULT_AVATAR_VOICE_ID, useAppState } from "../stores/appState";
+import { DEFAULT_AVATAR_VOICE_ID, PUBLIC_AVATAR_IDS, PUBLIC_AVATAR_NAMES, useAppState } from "../stores/appState";
 
 const router = useRouter();
 const route = useRoute();
@@ -446,9 +446,11 @@ onBeforeUnmount(() => {
   avatarRenderer.value = null;
 });
 
+let _avatarLoadActive = false;
 watch(
   () => currentAvatar.value?.id,
   () => {
+    if (_avatarLoadActive) return;
     applyVoiceSelection(String(currentAvatar.value?.voiceId ?? DEFAULT_AVATAR_VOICE_ID));
     loadAndRenderAvatar();
   },
@@ -471,10 +473,32 @@ watch(
   },
 );
 
+let creatingRenderer = false;
 const createRenderer = async () => {
+  if (creatingRenderer) return;
+  creatingRenderer = true;
+  try {
+    await _createRendererInner();
+  } finally {
+    creatingRenderer = false;
+  }
+};
+const _createRendererInner = async () => {
   await nextTick();
   if (!useCanvasRenderer.value || !canvasRef.value) return;
   avatarRenderer.value?.close();
+
+  const old = canvasRef.value;
+  try {
+    old.width = old.offsetWidth;
+  } catch {
+    const fresh = document.createElement("canvas");
+    fresh.className = old.className;
+    fresh.style.cssText = old.style.cssText;
+    old.parentNode?.replaceChild(fresh, old);
+    canvasRef.value = fresh;
+  }
+
   avatarRenderer.value = new AvatarJS(
     { canvas: canvasRef.value },
     () => {
@@ -498,68 +522,95 @@ const createRenderer = async () => {
 };
 
 const loadAndRenderAvatar = async () => {
-  startAvatarLoading();
-  const avatar = currentAvatar.value;
-  modelUrl.value = avatar?.modelUrl || "";
-  if (!avatar?.id || avatar.id === "sumi") {
-    avatarRenderer.value?.close();
-    avatarRenderer.value = null;
-    isChatMode.value = true;
-    finishAvatarLoading();
-    return;
-  }
+  _avatarLoadActive = true;
   try {
-    const res = await getAvatarById(avatar.id);
-    if (res?.code === 200 || res?.code === 0) {
-      const data = res.data as
-        | {
-            downloadLink?: string;
-            modelUrl?: string;
-            modelId?: string;
-            voiceId?: string | number;
-            ttsId?: string | number;
-            defaultVoiceId?: string | number;
-            builtinTts?: Array<{ ttsId?: string | number }>;
-            tts?: Array<{ ttsId?: string | number }>;
-          }
-        | undefined;
-      modelUrl.value = data?.downloadLink || data?.modelUrl || modelUrl.value;
-      if (data?.modelId && avatar) {
-        avatar.modelId = data.modelId;
-      }
-      const voiceFromBuiltin = data?.builtinTts?.find((item) => item?.ttsId)?.ttsId;
-      const voiceFromTts = data?.tts?.find((item) => item?.ttsId)?.ttsId;
-      const nextVoiceId = String(
-        data?.voiceId ??
-          data?.ttsId ??
-          data?.defaultVoiceId ??
-          voiceFromBuiltin ??
-          voiceFromTts ??
-          currentAvatar.value?.voiceId ??
-          DEFAULT_AVATAR_VOICE_ID,
-      ).trim();
-      applyVoiceSelectionLocal(nextVoiceId || DEFAULT_AVATAR_VOICE_ID);
-      await loadVoiceOptions(nextVoiceId || DEFAULT_AVATAR_VOICE_ID);
+    startAvatarLoading();
+
+    const storedId = state.selectedAvatarId;
+    if (storedId && storedId !== "sumi" && !state.avatars.find((a) => a.id === storedId)) {
+      try {
+        const res = await getAvatarById(storedId);
+        if ((res?.code === 200 || res?.code === 0) && res?.data) {
+          const d = res.data as Record<string, any>;
+          const isPublic = PUBLIC_AVATAR_IDS.includes(storedId);
+          state.avatars.push({
+            id: storedId,
+            name: PUBLIC_AVATAR_NAMES[storedId] || d.nickname || d.name || "Avatar",
+            desc: "",
+            type: isPublic ? "public" : "custom",
+            image: d.avatarImg || d.image || d.lookImg || "",
+            modelUrl: d.downloadLink || d.modelUrl || "",
+            modelId: d.modelId || "",
+            voiceId: String(d.voiceId ?? d.ttsId ?? d.defaultVoiceId ?? ""),
+            agentId: d.agentId || undefined,
+          });
+        }
+      } catch { /* ignore */ }
     }
-  } catch {
-    // keep fallback model url from store
-    const localVoice = String(currentAvatar.value?.voiceId ?? DEFAULT_AVATAR_VOICE_ID);
-    applyVoiceSelectionLocal(localVoice);
-    await loadVoiceOptions(localVoice);
-  }
-  if (!modelUrl.value) {
-    avatarRenderer.value?.close();
-    avatarRenderer.value = null;
-    finishAvatarLoading();
-    setTimeout(() => {
+
+    const avatar = currentAvatar.value;
+    modelUrl.value = avatar?.modelUrl || "";
+    if (!avatar?.id || avatar.id === "sumi") {
+      avatarRenderer.value?.close();
+      avatarRenderer.value = null;
       isChatMode.value = true;
-    }, 1500);
-    return;
-  }
-  await createRenderer();
-  if (useCanvasRenderer.value && !avatarRenderer.value) {
-    await nextTick();
+      finishAvatarLoading();
+      return;
+    }
+    try {
+      const res = await getAvatarById(avatar.id);
+      if (res?.code === 200 || res?.code === 0) {
+        const data = res.data as
+          | {
+              downloadLink?: string;
+              modelUrl?: string;
+              modelId?: string;
+              voiceId?: string | number;
+              ttsId?: string | number;
+              defaultVoiceId?: string | number;
+              builtinTts?: Array<{ ttsId?: string | number }>;
+              tts?: Array<{ ttsId?: string | number }>;
+            }
+          | undefined;
+        modelUrl.value = data?.downloadLink || data?.modelUrl || modelUrl.value;
+        if (data?.modelId && avatar) {
+          avatar.modelId = data.modelId;
+        }
+        const voiceFromBuiltin = data?.builtinTts?.find((item) => item?.ttsId)?.ttsId;
+        const voiceFromTts = data?.tts?.find((item) => item?.ttsId)?.ttsId;
+        const nextVoiceId = String(
+          data?.voiceId ??
+            data?.ttsId ??
+            data?.defaultVoiceId ??
+            voiceFromBuiltin ??
+            voiceFromTts ??
+            currentAvatar.value?.voiceId ??
+            DEFAULT_AVATAR_VOICE_ID,
+        ).trim();
+        applyVoiceSelectionLocal(nextVoiceId || DEFAULT_AVATAR_VOICE_ID);
+        await loadVoiceOptions(nextVoiceId || DEFAULT_AVATAR_VOICE_ID);
+      }
+    } catch {
+      const localVoice = String(currentAvatar.value?.voiceId ?? DEFAULT_AVATAR_VOICE_ID);
+      applyVoiceSelectionLocal(localVoice);
+      await loadVoiceOptions(localVoice);
+    }
+    if (!modelUrl.value) {
+      avatarRenderer.value?.close();
+      avatarRenderer.value = null;
+      finishAvatarLoading();
+      setTimeout(() => {
+        isChatMode.value = true;
+      }, 1500);
+      return;
+    }
     await createRenderer();
+    if (useCanvasRenderer.value && !avatarRenderer.value) {
+      await nextTick();
+      await createRenderer();
+    }
+  } finally {
+    _avatarLoadActive = false;
   }
 };
 
@@ -604,6 +655,7 @@ const sendViaOpenClaw = async (content: string) => {
   const controller = new AbortController();
   chatAbortController.value = controller;
 
+  console.log(`[Chat] sendViaOpenClaw agent=${agentId} msgCount=${chatHistory.value.length}`);
   try {
     const fullText = await openclawChat({
       messages: chatHistory.value,
@@ -614,6 +666,7 @@ const sendViaOpenClaw = async (content: string) => {
         latestAgentText.value = text;
       },
       onDone: async (text: string) => {
+        console.log(`[Chat] onDone len=${text.length} text=${text.substring(0, 100)}`);
         chatHistory.value.push({ role: "assistant", content: text });
         pushAgentMessage(text);
 
@@ -624,7 +677,8 @@ const sendViaOpenClaw = async (content: string) => {
           bubbleText.value = text;
         }
       },
-      onError: () => {
+      onError: (err) => {
+        console.error("[Chat] onError:", err);
         isTyping.value = false;
       },
     });

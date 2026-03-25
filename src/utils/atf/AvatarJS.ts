@@ -3,36 +3,47 @@ import CardManager from "#/static/lib/card_manager.js";
 const JS_VERSION = "1.0.0";
 const LOCAL_BASE = "/static/lib/";
 
-const loadScript = (url: string) =>
-  new Promise<void>((resolve, reject) => {
-    const scriptUrl = new URL(url, document.baseURI);
-    scriptUrl.searchParams.set("v", JS_VERSION);
-    const fullUrl = scriptUrl.href;
+const _scriptCache = new Map<string, Promise<void>>();
 
-    const existing = Array.from(document.scripts).find((item) => {
-      if (!item.src) return false;
-      try {
-        const loaded = new URL(item.src);
-        return loaded.origin === scriptUrl.origin && loaded.pathname === scriptUrl.pathname;
-      } catch {
-        return false;
-      }
+const loadScript = (url: string): Promise<void> => {
+  const scriptUrl = new URL(url, document.baseURI);
+  scriptUrl.searchParams.set("v", JS_VERSION);
+  const key = scriptUrl.pathname;
+
+  const cached = _scriptCache.get(key);
+  if (cached) return cached;
+
+  const p = new Promise<void>((resolve, reject) => {
+    const fullUrl = scriptUrl.href;
+    const existing = Array.from(document.scripts).find((s) => {
+      if (!s.src) return false;
+      try { return new URL(s.src).pathname === key; } catch { return false; }
     });
 
-    if (existing && existing.src === fullUrl) {
-      resolve();
+    if (existing) {
+      if (existing.dataset.loaded === "1") { resolve(); return; }
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error(`Failed: ${fullUrl}`)), { once: true });
       return;
     }
 
     const script = document.createElement("script");
     script.type = "text/javascript";
     script.src = fullUrl;
-    script.onload = () => resolve();
+    script.onload = () => { script.dataset.loaded = "1"; resolve(); };
     script.onerror = () => reject(new Error(`Failed to load script: ${fullUrl}`));
     document.body.appendChild(script);
   });
 
-const loadDependencies = async () => {
+  _scriptCache.set(key, p);
+  return p;
+};
+
+let _depsPromise: Promise<void> | null = null;
+
+const loadDependencies = (): Promise<void> => {
+  if (_depsPromise) return _depsPromise;
+
   const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
   const isWebGLClient =
     (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) ||
@@ -57,7 +68,12 @@ const loadDependencies = async () => {
     );
   }
 
-  await Promise.all(scripts.map((item) => loadScript(item)));
+  _depsPromise = (async () => {
+    for (const src of scripts) {
+      await loadScript(src);
+    }
+  })();
+  return _depsPromise;
 };
 
 class AvatarJS {
@@ -70,6 +86,7 @@ class AvatarJS {
   private onPlayEnd: () => void;
   private onError: (payload: unknown) => void;
   private pendingReceiveCb: (() => void) | null = null;
+  private _disposed = false;
 
   constructor(
     canvasOption: { canvas: HTMLCanvasElement; canvasWidth?: number; canvasHight?: number },
@@ -90,6 +107,7 @@ class AvatarJS {
 
   private async init() {
     try {
+      if (this._disposed) return;
       if (!this.modelUrl) {
         this.onError({ message: "Missing modelUrl" });
         return;
@@ -97,6 +115,8 @@ class AvatarJS {
       if (!this.modelUrl.endsWith("/")) this.modelUrl += "/";
 
       await loadDependencies();
+      if (this._disposed) return;
+
       const width = this.canvasOption.canvasWidth || this.canvasOption.canvas.offsetWidth;
       const height = this.canvasOption.canvasHight || this.canvasOption.canvas.offsetHeight;
       this.canvasOption.canvas.width = width;
@@ -105,12 +125,14 @@ class AvatarJS {
       this.cardManager = new CardManager(
         this.canvasOption.canvas,
         () => {
+          if (this._disposed) return;
           this.cardManager.drawDefaultImage(this.modelUrl);
           this.cardManager.enableCameraMotion(false);
           this.onWorkerReady();
           this.cardManager.pauseBodyVideo();
         },
         () => {
+          if (this._disposed) return;
           this.onAnimationReady();
           if (this.pendingReceiveCb) {
             const cb = this.pendingReceiveCb;
@@ -119,19 +141,21 @@ class AvatarJS {
           }
         },
         () => {
+          if (this._disposed) return;
           this.cardManager.pauseBodyVideo();
           this.onPlayEnd();
         },
-        (payload: unknown) => this.onError(payload),
+        (payload: unknown) => { if (!this._disposed) this.onError(payload); },
         () => {},
         () => {},
         `${LOCAL_BASE}decoderWorker.js`,
         `${LOCAL_BASE}rendererWorker.js`,
       );
 
+      if (this._disposed) return;
       this.cardManager.loadModel(this.modelUrl);
     } catch (error) {
-      this.onError(error);
+      if (!this._disposed) this.onError(error);
     }
   }
 
@@ -190,10 +214,13 @@ class AvatarJS {
   }
 
   close() {
+    this._disposed = true;
     if (!this.cardManager) return;
+    try { this.cardManager.stopPlay(); } catch { /* ignore */ }
     if (this.cardManager.worker) {
       this.cardManager.worker.terminate();
     }
+    this.cardManager = null;
   }
 }
 

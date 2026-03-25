@@ -59,7 +59,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 DEFAULT_PORT = 19000
 DEFAULT_HOST = "0.0.0.0"
-DEFAULT_API_BASE_URL = "https://sumi-test.sumeruai.com"
+DEFAULT_API_BASE_URL = "https://sumi.sumeruai.com"
 DEFAULT_WS_URL = ""
 
 CONF_PORT = int(os.getenv("ANIMA_PORT", str(DEFAULT_PORT)))
@@ -442,10 +442,29 @@ def openclaw_chat():
 
     if stream:
         def generate():
-            for line in upstream.iter_lines():
-                if line:
-                    yield line.decode("utf-8", errors="replace") + "\n"
+            line_count = 0
+            total_content = ""
+            for raw_line in upstream.iter_lines():
+                if not raw_line:
+                    yield "\n"
+                    continue
+                decoded = raw_line.decode("utf-8", errors="replace")
+                line_count += 1
+                if decoded.startswith("data:"):
+                    payload = decoded[5:].strip()
+                    if payload and payload != "[DONE]":
+                        try:
+                            parsed = json.loads(payload)
+                            delta = parsed.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                            if delta:
+                                total_content += delta
+                        except (json.JSONDecodeError, IndexError, KeyError):
+                            pass
+                yield decoded + "\n"
             yield "\n"
+            print(f"[OpenClaw] stream finished: {line_count} lines, content_len={len(total_content)}", flush=True)
+            if total_content:
+                print(f"[OpenClaw] full_reply: {total_content[:200]}{'...' if len(total_content) > 200 else ''}", flush=True)
         resp = Response(generate(), mimetype="text/event-stream")
         resp.headers["Cache-Control"] = "no-cache"
         resp.headers["X-Accel-Buffering"] = "no"
