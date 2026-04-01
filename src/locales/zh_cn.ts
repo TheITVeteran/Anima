@@ -13,6 +13,8 @@ export default {
     processing: "处理中...",
     confirmDelete: "确认删除",
     loading: "加载中...",
+    switchToEnglish: "English",
+    switchToChinese: "中文",
   },
   login: {
     brandSub: "为 OpenClaw Agent 带来 3D 数字人形象",
@@ -138,6 +140,13 @@ export default {
     assistantReply2: "我理解你的需求了，我们可以先从关键点入手。",
     assistantReply3: "你的想法很好，再补充一个可落地的方案。",
     assistantReply4: "我建议先确定边界，再逐步推进实现。",
+    ack: {
+      received: "好的，收到",
+      letMeThink: "好的，让我想想",
+      waitAMoment: "嗯，稍等一下",
+      rightAway: "好的，马上",
+      takeALook: "收到，我看看",
+    },
     agents: {
       general: {
         name: "通用助手",

@@ -96,9 +96,10 @@ const SELECTED_AVATAR_KEY = "animaSelectedAvatarId";
 
 const readSelectedAvatarId = (): string => {
   try {
-    return localStorage.getItem(SELECTED_AVATAR_KEY) || "sumi";
+    const stored = localStorage.getItem(SELECTED_AVATAR_KEY) || "";
+    return stored === "sumi" ? "" : stored;
   } catch {
-    return "sumi";
+    return "";
   }
 };
 
@@ -116,16 +117,7 @@ const readStoredEmail = (): string => {
 const state = reactive({
   userEmail: readStoredEmail(),
   selectedAvatarId: readSelectedAvatarId(),
-  avatars: [
-    {
-      id: "sumi",
-      name: "Sumi",
-      desc: translate("store.defaultAvatarDesc"),
-      type: "official",
-      image: "/sumi.png",
-      voiceId: DEFAULT_AVATAR_VOICE_ID,
-    } as Avatar,
-  ],
+  avatars: [] as Avatar[],
   chatMessages: [] as ChatMessage[],
 });
 
@@ -245,7 +237,7 @@ const useAppState = () => {
           modelUrl: modelUrl || existing?.modelUrl || "",
           modelId: String(item.modelId ?? existing?.modelId ?? "").trim() || undefined,
           voiceId: normalizeVoiceId(
-            item.voiceId ?? item.ttsId ?? item.defaultVoiceId ?? voiceFromBuiltin ?? voiceFromTts ?? existing?.voiceId,
+            item.voiceId ?? item.ttsId ?? voiceFromTts ?? item.defaultVoiceId ?? voiceFromBuiltin ?? existing?.voiceId,
           ),
           generating: isGenerating,
           progress: isGenerating ? 0 : isDone ? 100 : 0,
@@ -258,6 +250,8 @@ const useAppState = () => {
     const selectedExists = state.avatars.some((item) => item.id === state.selectedAvatarId);
     if (!selectedExists && state.avatars.length > 0) {
       state.selectedAvatarId = state.avatars[0].id;
+    } else if (!selectedExists) {
+      state.selectedAvatarId = "";
     }
   };
 

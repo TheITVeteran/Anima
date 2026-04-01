@@ -17,7 +17,7 @@ import { translate } from "../locales";
 import { modelGenerate } from "../api/model";
 
 const router = useRouter();
-const { createAvatarTask } = useAppState();
+const { createAvatarTask, renameAvatar } = useAppState();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const fileName = ref("");
@@ -107,10 +107,31 @@ const hasUnsubmittedDraft = computed(() => Boolean(avatarsId.value) && !hasSubmi
 
 const isSuccessCode = (code?: number) => code === 200 || code === 0;
 
+const getTrimmedAvatarName = () => avatarName.value.trim() || "My Avatar";
+
+const syncAvatarName = async () => {
+  const trimmedName = getTrimmedAvatarName();
+  avatarName.value = trimmedName;
+
+  if (avatarsId.value) {
+    renameAvatar(avatarsId.value, trimmedName);
+    const updateRes = await avatarsUpdate({
+      avatarsId: avatarsId.value,
+      nickname: trimmedName,
+    });
+    if (!isSuccessCode(updateRes?.code)) {
+      errorMessage.value = updateRes?.msg || translate("create.errorCreateTask");
+      return false;
+    }
+  }
+
+  return true;
+};
+
 const ensureAvatarId = async () => {
   if (!avatarsId.value) {
     // Follow ppt-talk standard creation path first.
-    const res = await preGeneration({ nickname: avatarName.value.trim() || "untitled" });
+    const res = await preGeneration({ nickname: getTrimmedAvatarName() });
     if (!isSuccessCode(res?.code) || !res?.data) {
       errorMessage.value = res?.msg || translate("create.errorCreateTask");
       return false;
@@ -305,6 +326,9 @@ const submit = async () => {
   loading.value = true;
   errorMessage.value = "";
   try {
+    const nameSynced = await syncAvatarName();
+    if (!nameSynced) return;
+
     const formData = new FormData();
     formData.append("url", uploadedImage.value);
     formData.append("avatarsId", avatarsId.value);
@@ -338,7 +362,7 @@ const submit = async () => {
       }
     }
 
-    createAvatarTask(avatarName.value.trim() || "My Avatar", {
+    createAvatarTask(getTrimmedAvatarName(), {
       id: avatarsId.value,
       image: uploadedImage.value || "/sumi.png",
       voiceId: DEFAULT_AVATAR_VOICE_ID,

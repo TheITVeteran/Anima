@@ -194,7 +194,7 @@ const currentAgent = computed(
 const showSpeechBubble = computed(() => isChatMode.value && !isAvatarLoading.value && bubbleVisible.value);
 const waitingAvatarImage = computed(() => {
   const avatar = currentAvatar.value;
-  if (!avatar || avatar.id === "sumi") return "";
+  if (!avatar) return "";
   const src = String(avatar.image || "").trim();
   return src;
 });
@@ -297,7 +297,7 @@ const applyVoiceSelection = async (voice: { id: string; languageId?: string | nu
   const normalized = String(voice?.id || "").trim() || DEFAULT_AVATAR_VOICE_ID;
   const avatarId = String(currentAvatar.value?.id ?? "").trim();
   const languageId = voice?.languageId;
-  if (!avatarId || avatarId === "sumi" || languageId === undefined || languageId === null || String(languageId).trim() === "") {
+  if (!avatarId || languageId === undefined || languageId === null || String(languageId).trim() === "") {
     applyVoiceSelectionLocal(normalized);
     return;
   }
@@ -374,6 +374,7 @@ const clearAvatarFinishTimer = () => {
 const startAvatarLoading = () => {
   isAvatarLoading.value = true;
   isChatMode.value = false;
+  fallbackImageLoaded.value = false;
   avatarLoadingStartedAt.value = Date.now();
   clearAvatarFinishTimer();
   clearAvatarLoadTimeout();
@@ -432,10 +433,10 @@ const startTypewriter = (text: string, durationMs: number) => {
 };
 
 const handleFallbackReady = () => {
+  if (fallbackImageLoaded.value) return;
   fallbackImageLoaded.value = true;
   if (!useCanvasRenderer.value) {
-    isChatMode.value = true;
-    //finishAvatarLoading();
+    finishAvatarLoading();
   }
 };
 
@@ -562,7 +563,7 @@ const loadAndRenderAvatar = async () => {
     startAvatarLoading();
 
     const storedId = state.selectedAvatarId;
-    if (storedId && storedId !== "sumi" && !state.avatars.find((a) => a.id === storedId)) {
+    if (storedId && !state.avatars.find((a) => a.id === storedId)) {
       try {
         const res = await getAvatarById(storedId);
         if ((res?.code === 200 || res?.code === 0) && res?.data) {
@@ -585,7 +586,7 @@ const loadAndRenderAvatar = async () => {
 
     const avatar = currentAvatar.value;
     modelUrl.value = avatar?.modelUrl || "";
-    if (!avatar?.id || avatar.id === "sumi") {
+    if (!avatar?.id) {
       avatarRenderer.value?.close();
       avatarRenderer.value = null;
       isChatMode.value = true;
@@ -616,9 +617,9 @@ const loadAndRenderAvatar = async () => {
         const nextVoiceId = String(
           data?.voiceId ??
             data?.ttsId ??
+            voiceFromTts ??
             data?.defaultVoiceId ??
             voiceFromBuiltin ??
-            voiceFromTts ??
             currentAvatar.value?.voiceId ??
             DEFAULT_AVATAR_VOICE_ID,
         ).trim();
@@ -668,20 +669,20 @@ const stopPlaying = () => {
   avatarRenderer.value?.stopPlay();
 };
 
-const ACK_PHRASES = [
-  "好的，收到",
-  "好的，让我想想",
-  "嗯，稍等一下",
-  "好的，马上",
-  "收到，我看看",
-];
+const ackPhrases = computed(() => [
+  translate("chat.ack.received"),
+  translate("chat.ack.letMeThink"),
+  translate("chat.ack.waitAMoment"),
+  translate("chat.ack.rightAway"),
+  translate("chat.ack.takeALook"),
+]);
 
 let _ackAborted = false;
 let _ackStopTimer: number | null = null;
 
 const playAcknowledgment = () => {
   _ackAborted = false;
-  const phrase = ACK_PHRASES[Math.floor(Math.random() * ACK_PHRASES.length)];
+  const phrase = ackPhrases.value[Math.floor(Math.random() * ackPhrases.value.length)];
   console.log(`[Ack] phrase="${phrase}"`);
 
   const avatar = currentAvatar.value;
@@ -796,7 +797,7 @@ const sendViaOpenClaw = async (content: string) => {
         chatHistory.value.push({ role: "assistant", content: text });
         pushAgentMessage(text);
 
-        if (avatarRenderer.value && avatar?.id && avatar.id !== "sumi") {
+        if (avatarRenderer.value && avatar?.id) {
           await playTtsWithLipSync(text);
         } else {
           isTyping.value = false;
@@ -929,7 +930,7 @@ const send = () => {
     pushAgentMessage(next);
 
     const avatarId = currentAvatar.value?.id;
-    if (avatarRenderer.value && avatarId && avatarId !== "sumi") {
+    if (avatarRenderer.value && avatarId) {
       await playTtsWithLipSync(next);
     } else {
       isTyping.value = false;
@@ -1088,8 +1089,6 @@ const toggleRecording = async () => {
           :src="waitingAvatarImage"
           :alt="avatarName"
           class="chat-loading-avatar"
-          @load="handleFallbackReady"
-          @error="handleFallbackReady"
         />
         <div class="chat-loading-name">{{ avatarName }}</div>
         <div class="chat-loading-status">{{ translate("chat.online") }}</div>
@@ -1097,7 +1096,7 @@ const toggleRecording = async () => {
       <button v-if="isChatMode && isBroadcast" class="interrupt-button-floating" @click="stopPlaying">
         <span class="interrupt-icon" aria-hidden="true"></span>
       </button>
-      <div v-if="isAvatarLoading" class="avatar-loading-mask">
+      <div v-if="!isChatMode" class="avatar-loading-mask">
         <div class="avatar-loading-spinner"></div>
         <div class="avatar-loading-text">{{ translate("chat.loadingAvatar") }}</div>
       </div>

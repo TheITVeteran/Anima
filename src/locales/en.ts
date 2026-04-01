@@ -13,6 +13,8 @@ export default {
     processing: "Processing...",
     confirmDelete: "Confirm Delete",
     loading: "Loading...",
+    switchToEnglish: "English",
+    switchToChinese: "中文",
   },
   login: {
     brandSub: "Bring 3D digital avatars to OpenClaw Agent",
@@ -138,6 +140,13 @@ export default {
     assistantReply2: "Got it. Let's start with the key points.",
     assistantReply3: "Nice idea. Here's another practical option.",
     assistantReply4: "I suggest defining boundaries first, then implementing step by step.",
+    ack: {
+      received: "Okay, got it.",
+      letMeThink: "Okay, let me think.",
+      waitAMoment: "Mm, give me a moment.",
+      rightAway: "Okay, right away.",
+      takeALook: "Got it, let me check.",
+    },
     agents: {
       general: {
         name: "General Assistant",

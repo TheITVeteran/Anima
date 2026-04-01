@@ -1470,6 +1470,22 @@ input {
   gap: 10px;
 }
 
+.language-toggle-btn {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.language-toggle-btn:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
 .test-logout-btn {
   height: 30px;
   padding: 0 14px;

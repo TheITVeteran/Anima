@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { avatarsDelete, avatarsList, getApiBaseUrl, getAvatarById } from "../api/avatars";
-import { translate } from "../locales";
+import { avatarsDelete, avatarsList, avatarsUpdate, getApiBaseUrl, getAvatarById } from "../api/avatars";
+import i18n, { setLanguage, translate } from "../locales";
 import { clearAuthCredentials } from "../api/user";
 import { useAppState } from "../stores/appState";
 import { DEFAULT_USER_EMAIL, PUBLIC_AVATAR_IDS, PUBLIC_AVATAR_NAMES } from "../stores/appState";
@@ -21,6 +21,10 @@ const deletingAvatarId = ref("");
 const showDeleteDialog = ref(false);
 const pendingDeleteAvatar = ref<{ id: string; name: string } | null>(null);
 const deleteErrorMessage = ref("");
+const currentLanguage = computed(() => (i18n.global.locale.value === "en" ? "en" : "zhCn"));
+const languageToggleText = computed(() =>
+  currentLanguage.value === "zhCn" ? translate("common.switchToEnglish") : translate("common.switchToChinese"),
+);
 
 const statusMap: Record<string, string> = {
   "1": "check",
@@ -47,8 +51,6 @@ const visibleAvatars = computed(() => {
   return state.avatars.filter((item) => item.type === activeTab.value);
 });
 
-const renderedAvatars = computed(() => visibleAvatars.value.filter((item) => item.id !== "sumi"));
-
 const publicCount = computed(() => state.avatars.filter((item) => item.type === "public").length);
 const officialCount = computed(() => state.avatars.filter((item) => item.type === "official").length + publicCount.value);
 const customCount = computed(() => state.avatars.filter((item) => item.type === "custom").length);
@@ -56,6 +58,41 @@ const customCount = computed(() => state.avatars.filter((item) => item.type === 
 const isAvatarReady = (avatar: { generating?: boolean; desc?: string }) => {
   if (avatar.generating) return false;
   return true;
+};
+
+const getMessageByKey = (locale: "zhCn" | "en", key: string) => {
+  const message = i18n.global.getLocaleMessage(locale) as Record<string, unknown>;
+  return key.split(".").reduce<unknown>((current, segment) => {
+    if (!current || typeof current !== "object") return undefined;
+    return (current as Record<string, unknown>)[segment];
+  }, message);
+};
+
+const matchesTranslatedText = (value: string | undefined, key: string) => {
+  if (!value) return false;
+  return (["zhCn", "en"] as const).some((locale) => getMessageByKey(locale, key) === value);
+};
+
+const getAvatarDesc = (avatar: Avatar) => {
+  if (avatar.type === "official" || avatar.type === "public") {
+    return translate("store.defaultAvatarDesc");
+  }
+  if (matchesTranslatedText(avatar.desc, "store.generatedDesc")) {
+    return translate("store.generatedDesc");
+  }
+  if (matchesTranslatedText(avatar.desc, "store.failedDesc")) {
+    return translate("store.failedDesc");
+  }
+  if (matchesTranslatedText(avatar.desc, "store.unknownStatusDesc")) {
+    return translate("store.unknownStatusDesc");
+  }
+  if (matchesTranslatedText(avatar.desc, "store.generatingServerDesc")) {
+    return translate("store.generatingServerDesc");
+  }
+  if (matchesTranslatedText(avatar.desc, "store.generatingDesc")) {
+    return translate("store.generatingDesc");
+  }
+  return avatar.desc;
 };
 
 const handleAvatarCardClick = (avatar: Avatar) => {
@@ -138,12 +175,22 @@ const startRename = (avatar: Avatar, event: Event) => {
   });
 };
 
-const confirmRename = () => {
-  if (editingAvatarId.value && editingName.value.trim()) {
-    renameAvatar(editingAvatarId.value, editingName.value.trim());
-  }
+const confirmRename = async () => {
+  const id = editingAvatarId.value;
+  const trimmed = editingName.value.trim();
   editingAvatarId.value = "";
   editingName.value = "";
+  if (!id || !trimmed) return;
+
+  renameAvatar(id, trimmed);
+  try {
+    const res = await avatarsUpdate({ avatarsId: id, nickname: trimmed });
+    if (!isSuccessCode(res?.code)) {
+      console.warn("[Rename] server update failed:", res?.msg);
+    }
+  } catch {
+    console.warn("[Rename] server update request failed");
+  }
 };
 
 const cancelRename = () => {
@@ -204,6 +251,10 @@ const logoutForTest = () => {
   localStorage.removeItem("userStore");
   state.userEmail = DEFAULT_USER_EMAIL;
   router.push("/login");
+};
+
+const toggleLanguage = () => {
+  setLanguage(currentLanguage.value === "zhCn" ? "en" : "zhCn");
 };
 
 const clearRetry = (avatarId: string) => {
@@ -320,6 +371,9 @@ onMounted(() => {
         <p>{{ listLoading ? translate("select.syncing") : translate("select.subtitle") }}</p>
       </div>
       <div class="select-header-right">
+        <button class="language-toggle-btn" type="button" @click="toggleLanguage">
+          {{ languageToggleText }}
+        </button>
         <button class="test-logout-btn" @click="logoutForTest">{{ translate("select.logout") }}</button>
         <div class="user-badge">
           <div class="user-avatar">
@@ -360,7 +414,7 @@ onMounted(() => {
         </button>
 
         <button
-          v-for="avatar in renderedAvatars"
+          v-for="avatar in visibleAvatars"
           :key="avatar.id"
           class="char-card"
           :class="{ selected: avatar.id === state.selectedAvatarId, generating: avatar.generating }"
@@ -406,7 +460,7 @@ onMounted(() => {
               />
             </div>
             <div class="char-desc">
-              {{ avatar.generating ? translate("select.estimate") : avatar.desc }}
+              {{ avatar.generating ? translate("select.estimate") : getAvatarDesc(avatar) }}
             </div>
             <span class="char-tag">{{ avatar.type === "public" ? translate("select.publicTag") : avatar.type === "official" ? translate("select.officialTag") : translate("select.customTag") }}</span>
           </div>
